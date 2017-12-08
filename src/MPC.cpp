@@ -5,7 +5,7 @@
 
 using CppAD::AD;
 
-size_t N = 40;
+size_t N = 8;
 double dt = 0.1;
 
 // This value assumes the model presented in the classroom is used.
@@ -20,7 +20,7 @@ double dt = 0.1;
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 
-double ref_v = 40;
+double ref_v = 80;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -48,19 +48,19 @@ class FG_eval {
 
       // Reference State Cost
       for (int i = 0; i < N; ++i) {
-          fg[0] += 5 * CppAD::pow(vars[cte_start + i], 2);
-          fg[0] += 5 * CppAD::pow(vars[epsi_start + i], 2);
-          fg[0] += 5 * CppAD::pow(vars[v_start + i] - ref_v, 2);
+          fg[0] += 2500 * CppAD::pow(vars[cte_start + i], 2);
+          fg[0] += 250 * CppAD::pow(vars[epsi_start + i], 2);
+          fg[0] += CppAD::pow(vars[v_start + i] - ref_v, 2);
       }
 
       for (int i = 0; i < N - 1; ++i) {
-          fg[0] += CppAD::pow(vars[delta_start + i], 2);
-          fg[0] += CppAD::pow(vars[a_start + i], 2);
+          fg[0] += 0.5 * CppAD::pow(vars[delta_start + i], 2);
+          fg[0] += 0.1 * CppAD::pow(vars[a_start + i], 2);
       }
 
       for (int i = 0; i < N - 2; ++i) {
-          fg[0] += 5 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
-          fg[0] += CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+          fg[0] += 0.1 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+          fg[0] += 0.01 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
       }
 
       //
@@ -124,6 +124,7 @@ class FG_eval {
           fg[1 + cte_start + t] = cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
           fg[1 + epsi_start + t] = epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
       }
+
   }
 };
 
@@ -172,8 +173,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // Set all non-actuators upper and lowerlimits
     // to the max negative and positive values.
     for (i = 0; i < delta_start; i++) {
-        vars_lowerbound[i] = numeric_limits<double>::min();
-        vars_upperbound[i] = numeric_limits<double>::max();
+        vars_lowerbound[i] = -1.0e19;
+        vars_upperbound[i] = 1.0e19;
     }
 
     // The upper and lower limits of delta are set to -25 and 25
