@@ -91,6 +91,9 @@ int main() {
                     double py = j[1]["y"];
                     double psi = -double(j[1]["psi"]);
                     double v = j[1]["speed"];
+                    double steer_value = -double(j[1]["steering_angle"]) * deg2rad(25);
+                    double throttle = j[1]["throttle"];
+
 
                     Eigen::VectorXd points_x(ptsx.size());
                     Eigen::VectorXd points_y(ptsy.size());
@@ -113,8 +116,22 @@ int main() {
                     double cte = polyeval(coeffs, 0);
                     double epsi = -atan(coeffs[1]);
 
+
+                    double dt = 0.1;
+                    const double Lf = 2.67;
+
+                    const double px_delayed = v * cos(steer_value) * dt;
+                    const double py_delayed = v * sin(steer_value) * dt;
+                    const double psi_delayed = v * steer_value * dt / Lf;
+                    const double v_delayed = v + throttle * dt;
+                    const double cte_delayed = cte + v * sin(epsi) * dt;
+                    const double epsi_delayed = epsi + psi_delayed;
                     Eigen::VectorXd state(6);
-                    state << 0, 0, 0, v, cte, epsi;
+                    state << px_delayed, py_delayed, psi_delayed, v_delayed, cte_delayed, epsi_delayed;
+
+
+//                    Eigen::VectorXd state(6);
+//                    state << 0, 0, 0, v, cte, epsi;
 
                     auto solution = mpc.Solve(state, coeffs);
                     /*
@@ -123,7 +140,7 @@ int main() {
                     * Both are in between [-1, 1].
                     *
                     */
-                    double steer_value = solution[0];
+                    steer_value = solution[0];
                     double throttle_value = solution[1];
 
                     json msgJson;
@@ -167,7 +184,7 @@ int main() {
                     //
                     // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
                     // SUBMITTING.
-                    // this_thread::sleep_for(chrono::milliseconds(100));
+                    this_thread::sleep_for(chrono::milliseconds(100));
                     ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
                 }
             } else {
