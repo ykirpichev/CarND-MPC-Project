@@ -35,6 +35,17 @@ Where,
 
 ### Timestep Length and Elapsed Duration (N & dt)
 Student discusses the reasoning behind the chosen N (timestep length) and dt (elapsed duration between timesteps) values. Additionally the student details the previous values tried.
+I followed the guidelines from lesson:
+* in the case of driving a car, T should be a few seconds, at most
+* T should be as large as possible, while dt should be as small as possible
+So, I tried the following values for `N={7,8,10,12,15,20,40}` for `DT={0.025,0.05,0.1,0.15,0.2,0.25}`
+The values which worked reasonably well for me are the following:
+```
+const size_t N = 10;
+const double DT = 0.1;
+```
+I noticed the following:
+
 
 ### Polynomial Fitting and MPC Preprocessing
 A polynomial is fitted to waypoints.
