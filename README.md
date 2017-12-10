@@ -69,11 +69,13 @@ Thus,
 The mistake which I did at the begining, was trying to optimize objective function first without latency in the model.
 Eventually, it results that I needed to turn objective parameters twice, first time for the model without latency used and then one more time for the model with control latency.
 
+Also, it seems that usage of different weights for different speed might improve robustness of algorithm and make it possible drive the vehicle with even higher speed.
+
 ### Timestep Length and Elapsed Duration (N & dt)
 In order to chose N and dt I followed the guidelines from lesson:
 * in the case of driving a car, T should be a few seconds, at most
 * T should be as large as possible, while dt should be as small as possible
-So, I tried the following values for `N={7,8,10,12,15,20,40}` for `DT={0.025,0.05,0.1,0.15,0.2,0.25}`
+So, I tried the following values for `N={7, 8, 10, 12, 15, 20, 40}` for `DT={0.025, 0.05, 0.1, 0.15, 0.2, 0.25}`
 The values which worked reasonably well for me are the following:
 ```
 const size_t N = 10;
@@ -149,9 +151,9 @@ I used approach which runs a simulation using the vehicle model starting from th
 ```
 
 Thus, MPC can deal with latency much more effectively, by explicitly taking it into account, than a PID controller.
-#### 
+
 ### The vehicle must successfully drive a lap around the track.
-TODO: capture video and provide link here.
+Here is [link on the final video with vehicle driving a lap](/video/mpc.avi)
 
 ---
 ## Dependencies
