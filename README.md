@@ -19,7 +19,7 @@ N, dt, and T are hyperparameters that usually tuned for each model predictive co
 Student describes their model in detail. This includes the state, actuators and update equations.
 I used global kinematic model described by lesson 18: Vechicle Models.
 `[x,y,ψ,v]` is the state of the vehicle, `Lf` is a physical characteristic of the vehicle, and `[δ,a]` are the actuators, or control inputs, to our system.
-`
+```
     // The equations for the model:
     // x[t+1] = x[t] + v[t] * cos(psi[t]) * dt
     // y[t+1] = y[t] + v[t] * sin(psi[t]) * dt
@@ -27,7 +27,7 @@ I used global kinematic model described by lesson 18: Vechicle Models.
     // v[t+1] = v[t] + a[t] * dt
     // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
     // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
-`
+```
 Where,
 * `Lf` measures the distance between the front of the vehicle and its center of gravity. The larger the vehicle, the slower the turn rate.
 * `psides` is desired orientation of vehicle which can be found using first order derivatives of fitted polynomial in the point.
