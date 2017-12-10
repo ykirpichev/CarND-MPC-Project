@@ -6,7 +6,7 @@
 
 using namespace std;
 
-size_t N = 10;
+const size_t N = 10;
 const double DT = 0.1;
 const double REF_V = 60;
 // This value assumes the model presented in the classroom is used.

@@ -125,7 +125,10 @@ int main() {
                     const double psi_delayed = v * steer_value * DT / Lf;
                     const double v_delayed = v + throttle * DT;
                     const double cte_delayed = cte + v * sin(epsi) * DT;
-                    const double epsi_delayed = epsi + psi_delayed;
+
+                    double psides0 = atan(coeffs[1] + 2 * coeffs[2] * px_delayed +
+                                              3 * coeffs[3] * pow(px_delayed, 2));
+                    const double epsi_delayed = psi_delayed - psides0;
 
                     // initialize initial state
                     Eigen::VectorXd state(6);
