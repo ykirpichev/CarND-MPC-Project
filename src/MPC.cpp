@@ -5,23 +5,6 @@
 
 using CppAD::AD;
 
-size_t N = 10;
-double dt = 0.1;
-
-// This value assumes the model presented in the classroom is used.
-//
-// It was obtained by measuring the radius formed by running the vehicle in the
-// simulator around in a circle with a constant steering angle and velocity on a
-// flat terrain.
-//
-// Lf was tuned until the the radius formed by the simulating the model
-// presented in the classroom matched the previous radius.
-//
-// This is the length from front to CoG that has a similar radius.
-const double Lf = 2.67;
-
-double ref_v = 60;
-
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
 // when one variable starts and another ends to make our lifes easier.
@@ -50,7 +33,7 @@ class FG_eval {
       for (int i = 0; i < N; ++i) {
           fg[0] += 10 * CppAD::pow(vars[cte_start + i], 2);
           fg[0] += 10 * CppAD::pow(vars[epsi_start + i], 2);
-          fg[0] += CppAD::pow(vars[v_start + i] - ref_v, 2);
+          fg[0] += CppAD::pow(vars[v_start + i] - REF_V, 2);
       }
 
       for (int i = 0; i < N - 1; ++i) {
@@ -110,19 +93,19 @@ class FG_eval {
 
           // Setup the rest of the model constraints
           // Recall the equations for the model:
-          // x_[t+1] = x[t] + v[t] * cos(psi[t]) * dt
-          // y_[t+1] = y[t] + v[t] * sin(psi[t]) * dt
-          // psi_[t+1] = psi[t] + v[t] / Lf * delta[t] * dt
-          // v_[t+1] = v[t] + a[t] * dt
-          // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
-          // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
+          // x_[t+1] = x[t] + v[t] * cos(psi[t]) * DT
+          // y_[t+1] = y[t] + v[t] * sin(psi[t]) * DT
+          // psi_[t+1] = psi[t] + v[t] / Lf * delta[t] * DT
+          // v_[t+1] = v[t] + a[t] * DT
+          // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * DT
+          // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * DT
 
-          fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
-          fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
-          fg[1 + psi_start + t] = psi1 - (psi0 + v0 * delta0 / Lf * dt);
-          fg[1 + v_start + t] = v1 - (v0 + a0 * dt);
-          fg[1 + cte_start + t] = cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
-          fg[1 + epsi_start + t] = epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
+          fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * DT);
+          fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * DT);
+          fg[1 + psi_start + t] = psi1 - (psi0 + v0 * delta0 / Lf * DT);
+          fg[1 + v_start + t] = v1 - (v0 + a0 * DT);
+          fg[1 + cte_start + t] = cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * DT));
+          fg[1 + epsi_start + t] = epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * DT);
       }
 
   }
@@ -249,12 +232,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     auto cost = solution.obj_value;
     std::cout << "Cost " << cost << std::endl;
 
-    // TODO: Return the first actuator values. The variables can be accessed with
-    // `solution.x[i]`.
-    //
-    // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
-    // creates a 2 element double vector.
-
+    // Return the first actuator values and predicted track points
     vector<double> result;
     result.push_back(solution.x[delta_start]);
     result.push_back(solution.x[a_start]);
