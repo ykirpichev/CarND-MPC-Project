@@ -2,7 +2,55 @@
 Self-Driving Car Engineer Nanodegree Program
 
 ---
+## Project Introduction
+In this project Model Predictive Control is implemented to drive the car around the track.
+However, this time the cross track error was not provided and have to be calculed by programm. Additionally, there's a 100 millisecond latency between actuations commands on top of the connection latency which should be correctly handled by model.
 
+## Solution
+The modle predictive control algorithm was used in order to address the problem.
+Model predictive controllers rely on dynamic models of the process, most often linear empirical models obtained by system identification. The main advantage of MPC is the fact that it allows the current timeslot to be optimized, while keeping future timeslots in account. This is achieved by optimizing a finite time-horizon, but only implementing the current timeslot and then optimizing again.
+
+The prediction horizon is the duration over which future predictions are made. We’ll refer to this as T.
+T is the product of two other variables, N and dt.
+
+N, dt, and T are hyperparameters that usually tuned for each model predictive controller. However, there are some general guidelines. T should be as large as possible, while dt should be as small as possible.
+
+### The model
+Student describes their model in detail. This includes the state, actuators and update equations.
+I used global kinematic model described by lesson 18: Vechicle Models.
+`[x,y,ψ,v]` is the state of the vehicle, `Lf` is a physical characteristic of the vehicle, and `[δ,a]` are the actuators, or control inputs, to our system.
+`
+    // The equations for the model:
+    // x[t+1] = x[t] + v[t] * cos(psi[t]) * dt
+    // y[t+1] = y[t] + v[t] * sin(psi[t]) * dt
+    // psi[t+1] = psi[t] + v[t] / Lf * delta[t] * dt
+    // v[t+1] = v[t] + a[t] * dt
+    // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
+    // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
+`
+Where,
+* `Lf` measures the distance between the front of the vehicle and its center of gravity. The larger the vehicle, the slower the turn rate.
+* `psides` is desired orientation of vehicle which can be found using first order derivatives of fitted polynomial in the point.
+* `f(x)` is the ground thruth position of vehicle which is calculated by fitted polynomial.
+
+### Timestep Length and Elapsed Duration (N & dt)
+Student discusses the reasoning behind the chosen N (timestep length) and dt (elapsed duration between timesteps) values. Additionally the student details the previous values tried.
+
+### Polynomial Fitting and MPC Preprocessing
+A polynomial is fitted to waypoints.
+
+If the student preprocesses waypoints, the vehicle state, and/or actuators prior to the MPC procedure it is described.
+
+### Model Predictive Control with Latency
+#### Handling Latency
+A contributing factor to latency is actuator dynamics. For example the time elapsed between when you command a steering angle to when that angle is actually achieved. This could easily be modeled by a simple dynamic system and incorporated into the vehicle model. One approach would be running a simulation using the vehicle model starting from the current state for the duration of the latency. The resulting state from the simulation is the new initial state for MPC.
+
+Thus, MPC can deal with latency much more effectively, by explicitly taking it into account, than a PID controller.
+
+### The vehicle must successfully drive a lap around the track.
+TODO: capture video and provide link here.
+
+---
 ## Dependencies
 
 * cmake >= 3.5
