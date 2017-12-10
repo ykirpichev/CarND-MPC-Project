@@ -51,9 +51,6 @@ I noticed the following:
 So, trying all different combinations listed above, `N=10, DT=0.1` showed the best performance.
 
 ### Polynomial Fitting and MPC Preprocessing
-A polynomial is fitted to waypoints.
-
-If the student preprocesses waypoints, the vehicle state, and/or actuators prior to the MPC procedure it is described.
 Provided way points were first transformed into the vehicle coordinage system.
 ```
     Eigen::VectorXd points_x(ptsx.size());
@@ -88,7 +85,10 @@ Obtained polinomial coefficients then used in order to calculate `cte` and `epsi
     double psides0 = atan(coeffs[1] + 2 * coeffs[2] * px_delayed +
                               3 * coeffs[3] * pow(px_delayed, 2));
 ```
-
+and
+```
+    auto solution = mpc.Solve(state, coeffs);
+```
 ### Model Predictive Control with Latency
 #### Handling Latency
 A contributing factor to latency is actuator dynamics. For example the time elapsed between when you command a steering angle to when that angle is actually achieved. This could easily be modeled by a simple dynamic system and incorporated into the vehicle model. One approach would be running a simulation using the vehicle model starting from the current state for the duration of the latency. The resulting state from the simulation is the new initial state for MPC.
