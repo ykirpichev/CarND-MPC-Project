@@ -10,13 +10,12 @@ However, this time the cross track error was not provided and have to be calcule
 The modle predictive control algorithm was used in order to address the problem.
 Model predictive controllers rely on dynamic models of the process, most often linear empirical models obtained by system identification. The main advantage of MPC is the fact that it allows the current timeslot to be optimized, while keeping future timeslots in account. This is achieved by optimizing a finite time-horizon, but only implementing the current timeslot and then optimizing again.
 
-The prediction horizon is the duration over which future predictions are made. We’ll refer to this as T.
+The prediction horizon is the duration over which future predictions are made. Prediction horizon is refered as T.
 T is the product of two other variables, N and dt.
 
 N, dt, and T are hyperparameters that usually tuned for each model predictive controller. However, there are some general guidelines. T should be as large as possible, while dt should be as small as possible.
 
 ### The model
-Student describes their model in detail. This includes the state, actuators and update equations.
 I used global kinematic model described by lesson 18: Vechicle Models.
 `[x,y,ψ,v]` is the state of the vehicle, `Lf` is a physical characteristic of the vehicle, and `[δ,a]` are the actuators, or control inputs, to our system.
 ```
@@ -35,7 +34,7 @@ Where,
 
 ### Timestep Length and Elapsed Duration (N & dt)
 Student discusses the reasoning behind the chosen N (timestep length) and dt (elapsed duration between timesteps) values. Additionally the student details the previous values tried.
-I followed the guidelines from lesson:
+In order to chose N and dt I followed the guidelines from lesson:
 * in the case of driving a car, T should be a few seconds, at most
 * T should be as large as possible, while dt should be as small as possible
 So, I tried the following values for `N={7,8,10,12,15,20,40}` for `DT={0.025,0.05,0.1,0.15,0.2,0.25}`
@@ -45,12 +44,50 @@ const size_t N = 10;
 const double DT = 0.1;
 ```
 I noticed the following:
+* if N * dt is large then the model behave bad on sharp turns when speed is large.
+* if dt is small, especially less than controll latency then the model bahave bad and in most cases does not converge to correct trajectory, instead it diverge from the right track.
+* if N * dt is small then the model does not predict correct trajectory
 
+So, trying all different combinations listed above, `N=10, DT=0.1` showed the best performance.
 
 ### Polynomial Fitting and MPC Preprocessing
 A polynomial is fitted to waypoints.
 
 If the student preprocesses waypoints, the vehicle state, and/or actuators prior to the MPC procedure it is described.
+Provided way points were first transformed into the vehicle coordinage system.
+```
+    Eigen::VectorXd points_x(ptsx.size());
+    Eigen::VectorXd points_y(ptsy.size());
+
+    //Display the waypoints/reference line
+    vector<double> next_x_vals;
+    vector<double> next_y_vals;
+
+    // convert pts to car coordinate
+    for (int i = 0; i < ptsx.size(); ++i) {
+        auto dx = ptsx[i] - px;
+        auto dy = ptsy[i] - py;
+        points_x[i] = dx * cos(psi) - dy * sin(psi);
+        points_y[i] = dx * sin(psi) + dy * cos(psi);
+        next_x_vals.push_back(points_x[i]);
+        next_y_vals.push_back(points_y[i]);
+
+    }
+```
+Then, third order polynomial is fitted using transformed way points.
+```
+    // fit polyline for pts
+    auto coeffs = polyfit(points_x, points_y, 3);
+```
+Obtained polinomial coefficients then used in order to calculate `cte` and `epsi` as well as used by solver in order find control sequence which best fit to reference vehicle trajectory.
+```
+    // calculate errors
+    double cte = polyeval(coeffs, 0);
+    double epsi = -atan(coeffs[1]);
+    ...
+    double psides0 = atan(coeffs[1] + 2 * coeffs[2] * px_delayed +
+                              3 * coeffs[3] * pow(px_delayed, 2));
+```
 
 ### Model Predictive Control with Latency
 #### Handling Latency
