@@ -28,12 +28,48 @@ I used global kinematic model described by lesson 18: Vechicle Models.
     // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
 ```
 Where,
+* `x[t]` x coordinate of the vehicle at the moment t
+* `y[t]` y coordinate of the vehicle at the moment t
+* `psi[t]` vehicle heading at the moment t
+* `cte` cross-track error
+* `epse` orientation error
 * `Lf` measures the distance between the front of the vehicle and its center of gravity. The larger the vehicle, the slower the turn rate.
 * `psides` is desired orientation of vehicle which can be found using first order derivatives of fitted polynomial in the point.
 * `f(x)` is the ground thruth position of vehicle which is calculated by fitted polynomial.
 
+The goal is to find values for `[δ,a]` which minimize the objective function which is calculated by the following code:
+```
+    // Any additions to the cost should be added to `fg[0]`.
+    fg[0] = 0;
+
+    // Reference State Cost
+    for (int i = 0; i < N; ++i) {
+      fg[0] += 7500 * CppAD::pow(vars[cte_start + i], 2);
+      fg[0] += 2500 * CppAD::pow(vars[epsi_start + i], 2);
+      fg[0] += CppAD::pow(vars[v_start + i] - REF_V, 2);
+    }
+
+    for (int i = 0; i < N - 1; ++i) {
+      fg[0] += 1500 * CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += CppAD::pow(vars[a_start + i], 2);
+    }
+
+    for (int i = 0; i < N - 2; ++i) {
+      fg[0] += 15000 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      fg[0] += 1 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+    }
+```
+
+The model objective function was turned manually based on model performance.
+Thus,
+* if model diverge from reference trajectory a lot, I tried to increase `cte` and `epse` contribution
+* if model used a lot for controls, I tried to increase contribution of `delta`
+* if model did a lot of sharp turns, I tried to increase contribution of `difference between consequitive delta`
+
+The mistake which I did at the begining, was trying to optimize objective function first without latency in the model.
+Eventually, it results that I needed to turn objective parameters twice, first time for the model without latency used and then one more time for the model with control latency.
+
 ### Timestep Length and Elapsed Duration (N & dt)
-Student discusses the reasoning behind the chosen N (timestep length) and dt (elapsed duration between timesteps) values. Additionally the student details the previous values tried.
 In order to chose N and dt I followed the guidelines from lesson:
 * in the case of driving a car, T should be a few seconds, at most
 * T should be as large as possible, while dt should be as small as possible
@@ -91,10 +127,29 @@ and
 ```
 ### Model Predictive Control with Latency
 #### Handling Latency
-A contributing factor to latency is actuator dynamics. For example the time elapsed between when you command a steering angle to when that angle is actually achieved. This could easily be modeled by a simple dynamic system and incorporated into the vehicle model. One approach would be running a simulation using the vehicle model starting from the current state for the duration of the latency. The resulting state from the simulation is the new initial state for MPC.
+As proposed by lesson latency can easily be modeled by a simple dynamic system and incorporated into the vehicle model.
+I used approach which runs a simulation using the vehicle model starting from the current state for the duration of the latency. The resulting state from the simulation is the new initial state for MPC.
+```
+    // take into account delay in control
+    const double px_delayed = v * cos(steer_value) * DT;
+    const double py_delayed = v * sin(steer_value) * DT;
+    const double psi_delayed = v * steer_value * DT / Lf;
+    const double v_delayed = v + throttle * DT;
+    const double cte_delayed = cte + v * sin(epsi) * DT;
+
+    double psides0 = atan(coeffs[1] + 2 * coeffs[2] * px_delayed +
+                              3 * coeffs[3] * pow(px_delayed, 2));
+    const double epsi_delayed = psi_delayed - psides0;
+
+    // initialize initial state
+    Eigen::VectorXd state(6);
+    state << px_delayed, py_delayed, psi_delayed, v_delayed, cte_delayed, epsi_delayed;
+
+    auto solution = mpc.Solve(state, coeffs);
+```
 
 Thus, MPC can deal with latency much more effectively, by explicitly taking it into account, than a PID controller.
-
+#### 
 ### The vehicle must successfully drive a lap around the track.
 TODO: capture video and provide link here.
 
