@@ -91,7 +91,7 @@ int main() {
                     double py = j[1]["y"];
                     double psi = -double(j[1]["psi"]);
                     double v = j[1]["speed"];
-                    double steer_value = -double(j[1]["steering_angle"]) * deg2rad(25);
+                    double delta = -double(j[1]["steering_angle"]);
                     double throttle = j[1]["throttle"];
 
 
@@ -116,23 +116,19 @@ int main() {
                     // fit polyline for pts
                     auto coeffs = polyfit(points_x, points_y, 3);
                     // calculate errors
-                    double cte = polyeval(coeffs, 0);
-                    double epsi = -atan(coeffs[1]);
+                    auto cte = polyeval(coeffs, 0);
+                    auto epsi = -atan(coeffs[1]);
 
                     // take into account delay in control
-                    const double px_delayed = v * cos(steer_value) * DT;
-                    const double py_delayed = v * sin(steer_value) * DT;
-                    const double psi_delayed = v * steer_value * DT / Lf;
-                    const double v_delayed = v + throttle * DT;
-                    const double cte_delayed = cte + v * sin(epsi) * DT;
-
-                    double psides0 = atan(coeffs[1] + 2 * coeffs[2] * px_delayed +
-                                              3 * coeffs[3] * pow(px_delayed, 2));
-                    const double epsi_delayed = psi_delayed - psides0;
-
+                    px = v * DT;
+                    py = 0;
+                    psi = v * delta * DT / Lf;
+                    cte = cte + v * sin(epsi) * DT;
+                    epsi = epsi + v * delta * DT / Lf;
+                    v = v + throttle * DT;
                     // initialize initial state
                     Eigen::VectorXd state(6);
-                    state << px_delayed, py_delayed, psi_delayed, v_delayed, cte_delayed, epsi_delayed;
+                    state << px, py, psi, v, cte, epsi;
 
                     auto solution = mpc.Solve(state, coeffs);
                     /*
@@ -140,14 +136,11 @@ int main() {
                     * Both are in between [-1, 1].
                     *
                     */
-                    steer_value = solution[0];
-                    throttle = solution[1];
-
                     json msgJson;
                     // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
                     // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-                    msgJson["steering_angle"] = -steer_value / deg2rad(25);
-                    msgJson["throttle"] = throttle;
+                    msgJson["steering_angle"] = -solution[0] / deg2rad(25);
+                    msgJson["throttle"] = solution[1];
 
                     //Display the MPC predicted trajectory
                     vector<double> mpc_x_vals;

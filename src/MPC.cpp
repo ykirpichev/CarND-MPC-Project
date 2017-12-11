@@ -25,24 +25,24 @@ class FG_eval {
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   void operator()(ADvector& fg, const ADvector& vars) {
-// The cost is stored is the first element of `fg`.
+      // The cost is stored is the first element of `fg`.
       // Any additions to the cost should be added to `fg[0]`.
       fg[0] = 0;
 
       // Reference State Cost
       for (int i = 0; i < N; ++i) {
-          fg[0] += 7500 * CppAD::pow(vars[cte_start + i], 2);
-          fg[0] += 2500 * CppAD::pow(vars[epsi_start + i], 2);
-          fg[0] += CppAD::pow(vars[v_start + i] - REF_V, 2);
+          fg[0] += 750 * CppAD::pow(vars[cte_start + i], 2);
+          fg[0] += 250 * CppAD::pow(vars[epsi_start + i], 2);
+          fg[0] += 0.1 * CppAD::pow(vars[v_start + i] - REF_V, 2);
       }
 
       for (int i = 0; i < N - 1; ++i) {
-          fg[0] += 1500 * CppAD::pow(vars[delta_start + i], 2);
-          fg[0] += CppAD::pow(vars[a_start + i], 2);
+          fg[0] += 500 * CppAD::pow(vars[delta_start + i], 2);
+          fg[0] += 1 * CppAD::pow(vars[a_start + i], 2);
       }
 
       for (int i = 0; i < N - 2; ++i) {
-          fg[0] += 15000 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+          fg[0] += 250000 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
           fg[0] += 1 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
       }
 
@@ -82,8 +82,8 @@ class FG_eval {
           AD<double> delta0 = vars[delta_start + t - 1];
           AD<double> a0 = vars[a_start + t - 1];
 
-          AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * pow(x0, 2) + coeffs[3] * pow(x0, 3);
-          AD<double> psides0 = CppAD::atan(coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3] * pow(x0, 2));
+          AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * CppAD::pow(x0, 2) + coeffs[3] * CppAD::pow(x0, 3);
+          AD<double> psides0 = CppAD::atan(coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3] * CppAD::pow(x0, 2));
           // Here's `x` to get you started.
           // The idea here is to constraint this value to be 0.
           //
