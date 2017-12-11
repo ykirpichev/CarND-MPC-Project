@@ -44,18 +44,18 @@ The goal is to find values for `[δ,a]` which minimize the objective function wh
 
     // Reference State Cost
     for (int i = 0; i < N; ++i) {
-      fg[0] += 7500 * CppAD::pow(vars[cte_start + i], 2);
-      fg[0] += 2500 * CppAD::pow(vars[epsi_start + i], 2);
-      fg[0] += CppAD::pow(vars[v_start + i] - REF_V, 2);
+      fg[0] += 750 * CppAD::pow(vars[cte_start + i], 2);
+      fg[0] += 250 * CppAD::pow(vars[epsi_start + i], 2);
+      fg[0] += 0.1 * CppAD::pow(vars[v_start + i] - REF_V, 2);
     }
 
     for (int i = 0; i < N - 1; ++i) {
-      fg[0] += 1500 * CppAD::pow(vars[delta_start + i], 2);
-      fg[0] += CppAD::pow(vars[a_start + i], 2);
+      fg[0] += 500 * CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += 1 * CppAD::pow(vars[a_start + i], 2);
     }
 
     for (int i = 0; i < N - 2; ++i) {
-      fg[0] += 15000 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      fg[0] += 250000 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
       fg[0] += 1 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
     }
 ```
@@ -71,6 +71,12 @@ Eventually, it results that I needed to turn objective parameters twice, first t
 
 Also, it seems that usage of different weights for different speed might improve robustness of algorithm and make it possible drive the vehicle with even higher speed.
 
+### Possible improvements
+Try to implement twiddle algorithm in order to optimize weights.
+
+### ψ updates
+In order to handle difference in ψ rotation by model (positive rotation is counter-clockwise) and in the simulator (a positive value implies a right turn and a negative value implies a left turn) I multiplied the steering value by -1 before sending it back to the server and when receiving it from the server.
+
 ### Timestep Length and Elapsed Duration (N & dt)
 In order to chose N and dt I followed the guidelines from lesson:
 * in the case of driving a car, T should be a few seconds, at most
@@ -83,10 +89,10 @@ const double DT = 0.1;
 ```
 I noticed the following:
 * if N * dt is large then the model behave bad on sharp turns when speed is large.
-* if dt is small, especially less than controll latency then the model bahave bad and in most cases does not converge to correct trajectory, instead it diverge from the right track.
+* for smaller dt the model gives better accuracy but requires higher N for given horizon. Thus, requires more computations and can increase latency.
 * if N * dt is small then the model does not predict correct trajectory
 
-So, trying all different combinations listed above, `N=10, DT=0.1` showed the best performance.
+So, trying all different combinations listed above, `N=10, DT=0.1` showed the best tradef-off between accuracy and computational time.
 
 ### Polynomial Fitting and MPC Preprocessing
 Provided way points were first transformed into the vehicle coordinage system.
@@ -119,9 +125,6 @@ Obtained polinomial coefficients then used in order to calculate `cte` and `epsi
     // calculate errors
     double cte = polyeval(coeffs, 0);
     double epsi = -atan(coeffs[1]);
-    ...
-    double psides0 = atan(coeffs[1] + 2 * coeffs[2] * px_delayed +
-                              3 * coeffs[3] * pow(px_delayed, 2));
 ```
 and
 ```
@@ -133,19 +136,15 @@ As proposed by lesson latency can easily be modeled by a simple dynamic system a
 I used approach which runs a simulation using the vehicle model starting from the current state for the duration of the latency. The resulting state from the simulation is the new initial state for MPC.
 ```
     // take into account delay in control
-    const double px_delayed = v * cos(steer_value) * DT;
-    const double py_delayed = v * sin(steer_value) * DT;
-    const double psi_delayed = v * steer_value * DT / Lf;
-    const double v_delayed = v + throttle * DT;
-    const double cte_delayed = cte + v * sin(epsi) * DT;
-
-    double psides0 = atan(coeffs[1] + 2 * coeffs[2] * px_delayed +
-                              3 * coeffs[3] * pow(px_delayed, 2));
-    const double epsi_delayed = psi_delayed - psides0;
-
+    px = v * DT;   // v * cos(psi) * dt
+    py = 0;        // v * sin(psi) * dt
+    psi = v * delta * DT / Lf;
+    cte = cte + v * sin(epsi) * DT;
+    epsi = epsi + v * delta * DT / Lf;
+    v = v + throttle * DT;  // update v last, since it is used for cte and epsi
     // initialize initial state
     Eigen::VectorXd state(6);
-    state << px_delayed, py_delayed, psi_delayed, v_delayed, cte_delayed, epsi_delayed;
+    state << px, py, psi, v, cte, epsi;
 
     auto solution = mpc.Solve(state, coeffs);
 ```
